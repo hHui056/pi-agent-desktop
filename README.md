@@ -91,6 +91,29 @@ npm run setup
 | `npm run diagnose` | 三轮对照诊断 Electron 启动，结果写 `build/diagnose.log` |
 | `npm run dist:win` | 打出 `dist/*.zip` 与 `dist/win-unpacked/` |
 
+### 自动打包（GitHub Actions）
+
+`.github/workflows/build-windows.yml` 把打包搬到 GitHub 的 Windows runner 上，本机不用开着：
+
+| 触发 | 结果 |
+|---|---|
+| 推送到 `main` | 跑一次完整构建，zip 作为该次运行的 Artifact 保留 14 天 |
+| 打 `v*` tag（如 `v0.1.0`） | 额外创建 GitHub Release，并把 zip 挂上去 |
+| 手动 | 仓库 Actions 页 → `build-windows` → Run workflow |
+
+产物下载：仓库 **Actions** → 点开某次运行 → 页面底部 **Artifacts** →
+`pi-agent-desktop-win-x64`（里面就是 `pi-agent-desktop-<version>-win-x64.zip`）。
+
+两个 CI 专属注意点：
+
+1. **工作流里必须保留 `npm run setup` 这一步**。`electron-builder.yml` 的 `extraResources` 指向
+   `build/pi` 与 `vendor/node/node.exe`，两者都在 `.gitignore` 中、仓库里没有，必须由脚本现场生成；
+   只跑 `npm ci && npm run dist:win` 会因为 extraResources 源目录缺失而失败。
+2. **CI 产物不带预置的 `rg.exe` / `fd.exe`**。runner 上没有 `~/.pi/agent/bin`，
+   `seed-runtime` 只告警不中断。另外 `electron-builder.yml` 目前没把 `vendor/tools` 映射到
+   `resources/tools`，而 `seedManagedTools()` 在打包态正是去 `process.resourcesPath/tools` 找源文件
+   ——离线使用 pi 的 grep/find 前，这两处需要一起补。
+
 ### 为什么 `npm run dev` 带 `--no-sandbox`、profile 放仓库内
 
 这两条都是**本机实测出来的必需项**，不是通用做法。
