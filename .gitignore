@@ -1,0 +1,30 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+out/
+release/
+*.tsbuildinfo
+
+# 自带运行时（体积大、可重新下载，不入库）
+vendor/node/node.exe
+
+# Phase 0 探针产物：含 pi 配置副本（可能内含 API Key）、扩展树与抓包，绝不入库
+build/
+
+# npm / Electron 下载缓存（重定向到工作区时产生）
+.npm-cache/
+.electron-cache/
+downloads/
+
+# 开发期的 Chromium profile（含 state.json / startup.log）
+.dev-userdata/
+
+# 编辑器 / 系统
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+Desktop.ini
+*.log

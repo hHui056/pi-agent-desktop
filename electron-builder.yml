@@ -1,0 +1,43 @@
+appId: dev.local.pi-agent-desktop
+productName: pi-agent-desktop
+copyright: MIT
+
+directories:
+  output: dist
+  buildResources: resources
+
+# node-pty ships N-API prebuilds inside its npm tarball. Rebuilding them on Windows
+# requires Spectre-mitigated MSVC libs and patched gyp files, so we ship the
+# prebuilds untouched.
+npmRebuild: false
+
+files:
+  - out/**/*
+  - package.json
+  # Debug symbols inside node-pty prebuilds are ~31 MB and never used at runtime.
+  - "!**/*.pdb"
+  - "!build/**"
+  - "!vendor/**"
+  - "!.npm-cache/**"
+  - "!dist/**"
+
+# conpty.dll and OpenConsole.exe are located relative to the .node file, so the
+# whole package has to exist as real files on disk — "**/*.node" alone is not enough.
+asarUnpack:
+  - "**/node_modules/node-pty/**"
+
+# The pi runtime tree and its own node.exe live outside the asar, because an
+# external node.exe cannot read asar virtual paths.
+extraResources:
+  - from: build/pi
+    to: pi
+  - from: vendor/node/node.exe
+    to: pi/node.exe
+
+win:
+  target:
+    - zip
+    - dir
+
+zip:
+  artifactName: ${productName}-${version}-win-x64.zip
