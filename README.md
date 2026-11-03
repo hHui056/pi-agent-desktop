@@ -98,11 +98,15 @@ npm run setup
 | 触发 | 结果 |
 |---|---|
 | 推送到 `main` | 跑一次完整构建，zip 作为该次运行的 Artifact 保留 14 天 |
-| 打 `v*` tag（如 `v0.1.0`） | 额外创建 GitHub Release，并把 zip 挂上去 |
+| 打版本 tag（`0.1.0` 或 `v0.1.0` 都认） | 额外创建 GitHub Release，并把 zip 挂上去 |
 | 手动 | 仓库 Actions 页 → `build-windows` → Run workflow |
 
 产物下载：仓库 **Actions** → 点开某次运行 → 页面底部 **Artifacts** →
 `pi-agent-desktop-win-x64`（里面就是 `pi-agent-desktop-<version>-win-x64.zip`）。
+
+「编译」和「打包」是两步，失败时先看是哪一步红：`编译` 对应 `npm run build`（electron-vite），
+`打包` 对应 `electron-builder`。任一步失败后，`失败诊断` 会把日志尾部 40 行写成 workflow 注解，
+在 **Checks** 页面能直接看到错误原文，不用去翻原始日志。
 
 两个 CI 专属注意点：
 

@@ -1,5 +1,5 @@
 # 自动打包：推送到 main 或打 tag 时，在 GitHub 的 Windows runner 上跑
-# 「npm ci → 类型检查 → 准备自带运行时 → electron-builder」，并上传 zip 产物。
+# 「npm ci → 类型检查 → 准备自带运行时 → 编译 → electron-builder」，并上传 zip 产物。
 #
 # 为什么 CI 里一定要跑 `npm run setup`：
 #   electron-builder.yml 的 extraResources 指向 `build/pi` 和 `vendor/node/node.exe`，
@@ -10,7 +10,8 @@ name: build-windows
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    # 打 tag 才出 Release。两种版本号习惯都认：0.1.0 与 v0.1.0。
+    tags: ['v*', '[0-9]*']
   workflow_dispatch:
 
 permissions:
@@ -51,9 +52,37 @@ jobs:
         # ensure-electron.mjs（补下载 Electron）+ seed-runtime.mjs（装 build/pi、复制 node.exe）
         run: npm run setup
 
+      # 编译与打包分成两步，失败时能一眼看出是哪一半挂的。
+      # 两处都用 Tee-Object 留一份日志，供下面的「失败诊断」步骤转成注解。
+      - name: 编译
+        shell: pwsh
+        run: |
+          npm run build 2>&1 | Tee-Object -FilePath build.log
+          exit $LASTEXITCODE
+
       - name: 打包
-        # dist:win 已带 --publish never，发布交给下面的 Release 步骤。
-        run: npm run dist:win
+        shell: pwsh
+        run: |
+          npx electron-builder --win --publish never 2>&1 | Tee-Object -FilePath package.log
+          exit $LASTEXITCODE
+
+      # 失败时把日志尾部写成 workflow 注解：它出现在 Checks 页面，也能通过
+      # check-runs API 读到，不必登录后台翻原始日志。
+      - name: 失败诊断
+        if: failure()
+        shell: pwsh
+        run: |
+          $lines = @()
+          foreach ($file in @('build.log', 'package.log')) {
+            if (Test-Path $file) {
+              $lines += "===== $file ====="
+              $lines += Get-Content $file -Tail 40
+            }
+          }
+          if ($lines.Count -eq 0) { $lines = @('没有捕获到日志') }
+          $lines | ForEach-Object { Write-Host $_ }
+          $text = ($lines -join "`n") -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A'
+          Write-Host "::error title=CI失败日志::$text"
 
       - name: 上传 zip 产物
         uses: actions/upload-artifact@v4
@@ -64,7 +93,7 @@ jobs:
           retention-days: 14
 
       - name: 打 tag 时创建 Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.zip
