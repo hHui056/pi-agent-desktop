@@ -38,6 +38,8 @@ win:
   target:
     - zip
     - dir
-
-zip:
-  artifactName: ${productName}-${version}-win-x64.zip
+  # electron-builder 26 的 schema 里没有顶层 `zip` 分组，写顶层会直接失败：
+  #   ⨯ Invalid configuration object. - configuration has an unknown property 'zip'
+  # zip 的产物名只能由 platform/global 的 artifactName 控制，所以挂在 win 下。
+  # ${arch} 在 win x64 上展开为 x64，产物仍是 pi-agent-desktop-<version>-win-x64.zip。
+  artifactName: ${productName}-${version}-win-${arch}.zip
